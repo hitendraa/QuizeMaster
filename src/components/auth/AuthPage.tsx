@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { BookOpen, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -23,13 +23,23 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Welcome back!');
-      navigate('/');
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        if (error.message === 'Invalid login credentials') {
+          toast.error('Invalid email or password. Please check your credentials.');
+        } else {
+          toast.error(error.message || 'An error occurred during sign in');
+        }
+      } else {
+        toast.success('Welcome back!');
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Sign in catch error:', error);
+      toast.error('An unexpected error occurred');
     }
     
     setLoading(false);
@@ -39,12 +49,28 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signUp(email, password, fullName);
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Account created! Please check your email to verify your account.');
+    try {
+      const { error } = await signUp(email, password, fullName);
+      
+      if (error) {
+        console.error('Sign up error:', error);
+        if (error.message.includes('already registered')) {
+          toast.error('This email is already registered. Please sign in instead.');
+        } else if (error.message.includes('Password')) {
+          toast.error('Password must be at least 6 characters long');
+        } else {
+          toast.error(error.message || 'An error occurred during registration');
+        }
+      } else {
+        toast.success('Account created successfully! You can now sign in.');
+        // Clear the form
+        setEmail('');
+        setPassword('');
+        setFullName('');
+      }
+    } catch (error) {
+      console.error('Sign up catch error:', error);
+      toast.error('An unexpected error occurred');
     }
     
     setLoading(false);
@@ -149,8 +175,9 @@ const AuthPage = () => {
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Create a password"
+                        placeholder="Create a password (min 6 characters)"
                         required
+                        minLength={6}
                       />
                       <Button
                         type="button"
@@ -169,6 +196,13 @@ const AuthPage = () => {
                 </form>
               </TabsContent>
             </Tabs>
+
+            <div className="mt-6 text-center">
+              <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                <AlertCircle className="h-4 w-4" />
+                <span>Test accounts are created as students by default.</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
