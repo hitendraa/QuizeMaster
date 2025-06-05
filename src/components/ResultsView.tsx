@@ -1,10 +1,9 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Trophy, CheckCircle, XCircle, ArrowLeft, Calendar, Clock } from 'lucide-react';
-import type { Quiz, QuizResult } from '@/pages/Index';
+import type { Quiz, QuizResult } from '@/types/quiz';
 
 interface ResultsViewProps {
   result: QuizResult;

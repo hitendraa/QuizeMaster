@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Save, X } from 'lucide-react';
-import type { Quiz, Question } from '@/pages/Index';
+import type { Quiz, Question } from '@/types/quiz';
 
 interface QuizCreatorProps {
   onSave: (quiz: Quiz) => void;

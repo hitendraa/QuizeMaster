@@ -4,18 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, Clock, Trophy, ArrowLeft, Play, Calendar } from 'lucide-react';
-import type { Quiz, QuizResult } from '@/pages/Index';
+import { BookOpen, Clock, Trophy, Play, Calendar } from 'lucide-react';
+import type { Quiz, QuizResult } from '@/types/quiz';
 
-interface StudentDashboardProps {
-  quizzes: Quiz[];
-  results: QuizResult[];
-  onTakeQuiz: (quiz: Quiz) => void;
-  onBackToRoleSelection: () => void;
-}
-
-const StudentDashboard = ({ quizzes, results, onTakeQuiz, onBackToRoleSelection }: StudentDashboardProps) => {
+const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState<'available' | 'completed'>('available');
+  const [quizzes] = useState<Quiz[]>([]);
+  const [results] = useState<QuizResult[]>([]);
 
   const completedQuizIds = new Set(results.map(r => r.quizId));
   const availableQuizzes = quizzes.filter(quiz => !completedQuizIds.has(quiz.id));
@@ -43,20 +38,9 @@ const StudentDashboard = ({ quizzes, results, onTakeQuiz, onBackToRoleSelection 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onBackToRoleSelection}
-              className="text-gray-600 hover:text-gray-800"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Login
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">Student Dashboard</h1>
-              <p className="text-gray-600 mt-1">Welcome back! Ready to test your knowledge?</p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Student Dashboard</h1>
+            <p className="text-gray-600 mt-1">Welcome back! Ready to test your knowledge?</p>
           </div>
         </div>
 
@@ -170,7 +154,6 @@ const StudentDashboard = ({ quizzes, results, onTakeQuiz, onBackToRoleSelection 
                         <span>Created {quiz.createdAt.toLocaleDateString()}</span>
                       </div>
                       <Button 
-                        onClick={() => onTakeQuiz(quiz)}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
                       >
                         <Play className="h-4 w-4 mr-2" />
@@ -184,7 +167,7 @@ const StudentDashboard = ({ quizzes, results, onTakeQuiz, onBackToRoleSelection 
               <div className="col-span-full text-center py-12">
                 <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-600 mb-2">No available quizzes</h3>
-                <p className="text-gray-500">You've completed all available quizzes! Check back later for new ones.</p>
+                <p className="text-gray-500">Check back later for new quizzes!</p>
               </div>
             )
           ) : (

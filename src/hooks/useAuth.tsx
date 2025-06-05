@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -32,18 +33,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Fetch user role from profiles table
           setTimeout(async () => {
             try {
-              const { data: profile } = await supabase
+              const { data: profile, error } = await supabase
                 .from('profiles')
                 .select('role')
                 .eq('id', session.user.id)
                 .single();
               
-              setUserRole(profile?.role || 'student');
+              console.log('Profile fetch result:', { profile, error });
+              
+              if (error) {
+                console.error('Error fetching user role:', error);
+                setUserRole('student'); // Default to student on error
+              } else {
+                setUserRole(profile?.role || 'student');
+              }
             } catch (error) {
               console.error('Error fetching user role:', error);
               setUserRole('student');
             }
-          }, 0);
+          }, 100);
         } else {
           setUserRole(null);
         }
@@ -54,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);

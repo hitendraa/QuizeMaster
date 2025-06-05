@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
 import { Clock, ArrowLeft, ArrowRight, Send } from 'lucide-react';
-import type { Quiz, QuizResult } from '@/pages/Index';
+import type { Quiz, QuizResult } from '@/types/quiz';
 
 interface QuizTakingProps {
   quiz: Quiz;
