@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { BookOpen, ArrowLeft, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ const AuthPage = () => {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('signin');
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -30,6 +31,8 @@ const AuthPage = () => {
         console.error('Sign in error:', error);
         if (error.message === 'Invalid login credentials') {
           toast.error('Invalid email or password. Please check your credentials.');
+        } else if (error.message.includes('Email not confirmed')) {
+          toast.error('Please check your email and click the confirmation link before signing in.');
         } else {
           toast.error(error.message || 'An error occurred during sign in');
         }
@@ -56,17 +59,21 @@ const AuthPage = () => {
         console.error('Sign up error:', error);
         if (error.message.includes('already registered')) {
           toast.error('This email is already registered. Please sign in instead.');
+          setActiveTab('signin');
         } else if (error.message.includes('Password')) {
           toast.error('Password must be at least 6 characters long');
+        } else if (error.message.includes('email')) {
+          toast.error('Please enter a valid email address');
         } else {
           toast.error(error.message || 'An error occurred during registration');
         }
       } else {
-        toast.success('Account created successfully! You can now sign in.');
+        toast.success('Account created successfully! Please check your email for confirmation.');
         // Clear the form
         setEmail('');
         setPassword('');
         setFullName('');
+        setActiveTab('signin');
       }
     } catch (error) {
       console.error('Sign up catch error:', error);
@@ -97,7 +104,7 @@ const AuthPage = () => {
             <CardDescription>Sign in to your account or create a new one</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -114,6 +121,7 @@ const AuthPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
                       required
+                      disabled={loading}
                     />
                   </div>
                   <div>
@@ -126,6 +134,7 @@ const AuthPage = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter your password"
                         required
+                        disabled={loading}
                       />
                       <Button
                         type="button"
@@ -133,6 +142,7 @@ const AuthPage = () => {
                         size="sm"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-1"
+                        disabled={loading}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -154,6 +164,7 @@ const AuthPage = () => {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Enter your full name"
+                      disabled={loading}
                     />
                   </div>
                   <div>
@@ -165,6 +176,7 @@ const AuthPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
                       required
+                      disabled={loading}
                     />
                   </div>
                   <div>
@@ -178,6 +190,7 @@ const AuthPage = () => {
                         placeholder="Create a password (min 6 characters)"
                         required
                         minLength={6}
+                        disabled={loading}
                       />
                       <Button
                         type="button"
@@ -185,6 +198,7 @@ const AuthPage = () => {
                         size="sm"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-1"
+                        disabled={loading}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -197,10 +211,15 @@ const AuthPage = () => {
               </TabsContent>
             </Tabs>
 
-            <div className="mt-6 text-center">
+            <div className="mt-6 space-y-3">
               <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                <CheckCircle className="h-4 w-4" />
+                <span>New accounts are created as students by default.</span>
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
                 <AlertCircle className="h-4 w-4" />
-                <span>Test accounts are created as students by default.</span>
+                <span>Check your email for a confirmation link after signing up.</span>
               </div>
             </div>
           </CardContent>

@@ -29,36 +29,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state changed:', event, session);
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user && event === 'SIGNED_IN') {
-          // Fetch user role from profiles table with delay to ensure profile exists
-          setTimeout(async () => {
+        if (session?.user) {
+          // Fetch user role from profiles table
+          try {
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
+            
+            console.log('Profile fetch result:', { profile, error, userId: session.user.id });
+            
             if (!mounted) return;
-            try {
-              const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', session.user.id)
-                .single();
-              
-              console.log('Profile fetch result:', { profile, error });
-              
-              if (!mounted) return;
-              
-              if (error) {
-                console.error('Error fetching user role:', error);
-                setUserRole('student'); // Default to student on error
-              } else {
-                setUserRole(profile?.role || 'student');
-              }
-            } catch (error) {
+            
+            if (error) {
               console.error('Error fetching user role:', error);
-              if (mounted) setUserRole('student');
+              // If profile doesn't exist yet, default to student
+              setUserRole('student');
+            } else {
+              setUserRole(profile?.role || 'student');
             }
-          }, 1000); // Increased delay to 1 second
+          } catch (error) {
+            console.error('Error fetching user role:', error);
+            if (mounted) setUserRole('student');
+          }
         } else {
           setUserRole(null);
         }
@@ -71,16 +69,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('Initial session:', session, error);
+        console.log('Initial session check:', session?.user?.email, error);
         
-        if (mounted) {
+        if (mounted && !error) {
           setSession(session);
           setUser(session?.user ?? null);
-          setLoading(false);
+          
+          if (session?.user) {
+            // Fetch role for existing session
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (!profileError && profile) {
+              setUserRole(profile.role);
+            } else {
+              setUserRole('student');
+            }
+          }
         }
+        
+        if (mounted) setLoading(false);
       } catch (error) {
         console.error('Error getting initial session:', error);
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setUserRole(null);
+        }
       }
     };
 
@@ -94,19 +111,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+      }
+      
       return { error };
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error('Sign in catch error:', error);
       return { error };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
+      setLoading(true);
       const redirectUrl = `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signUp({
@@ -122,20 +148,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         console.error('Sign up error:', error);
+      } else {
+        console.log('Sign up successful for:', email);
       }
       
       return { error };
     } catch (error) {
       console.error('Sign up catch error:', error);
       return { error };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
+      setLoading(true);
       await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
     } catch (error) {
       console.error('Sign out error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
