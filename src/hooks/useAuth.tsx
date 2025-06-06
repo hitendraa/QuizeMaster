@@ -21,8 +21,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<'admin' | 'student' | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      console.log('Profile fetch result:', { profile, error, userId });
+      
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return 'student';
+      }
+      
+      return profile?.role || 'student';
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+      return 'student';
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', initialSession?.user?.email, error);
+        
+        if (mounted && !error && initialSession) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          
+          // Fetch user role
+          const role = await fetchUserRole(initialSession.user.id);
+          if (mounted) {
+            setUserRole(role as 'admin' | 'student');
+          }
+        }
+        
+        if (mounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -30,78 +80,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!mounted) return;
         
         console.log('Auth state changed:', event, session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user role from profiles table
-          try {
-            const { data: profile, error } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', session.user.id)
-              .single();
-            
-            console.log('Profile fetch result:', { profile, error, userId: session.user.id });
-            
-            if (!mounted) return;
-            
-            if (error) {
-              console.error('Error fetching user role:', error);
-              // If profile doesn't exist yet, default to student
-              setUserRole('student');
-            } else {
-              setUserRole(profile?.role || 'student');
+          // Fetch user role in background
+          setTimeout(async () => {
+            if (mounted) {
+              const role = await fetchUserRole(session.user.id);
+              if (mounted) {
+                setUserRole(role as 'admin' | 'student');
+              }
             }
-          } catch (error) {
-            console.error('Error fetching user role:', error);
-            if (mounted) setUserRole('student');
-          }
+          }, 0);
         } else {
           setUserRole(null);
         }
         
-        if (mounted) setLoading(false);
+        // Only set loading to false after we've processed the auth state
+        if (mounted) {
+          setLoading(false);
+        }
       }
     );
 
-    // Check for existing session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('Initial session check:', session?.user?.email, error);
-        
-        if (mounted && !error) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            // Fetch role for existing session
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', session.user.id)
-              .single();
-            
-            if (!profileError && profile) {
-              setUserRole(profile.role);
-            } else {
-              setUserRole('student');
-            }
-          }
-        }
-        
-        if (mounted) setLoading(false);
-      } catch (error) {
-        console.error('Error getting initial session:', error);
-        if (mounted) {
-          setLoading(false);
-          setUserRole(null);
-        }
-      }
-    };
-
-    getInitialSession();
+    // Initialize auth
+    initializeAuth();
 
     return () => {
       mounted = false;
