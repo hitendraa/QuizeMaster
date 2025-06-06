@@ -1,16 +1,111 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { BookOpen, Clock, Trophy, Play, Calendar } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { Quiz, QuizResult } from '@/types/quiz';
 
 const StudentDashboard = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'available' | 'completed'>('available');
-  const [quizzes] = useState<Quiz[]>([]);
-  const [results] = useState<QuizResult[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [results, setResults] = useState<QuizResult[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchQuizzes();
+    fetchResults();
+  }, [user]);
+
+  const fetchQuizzes = async () => {
+    try {
+      const { data: quizzesData, error } = await supabase
+        .from('quizzes')
+        .select(`
+          *,
+          questions(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching quizzes:', error);
+        toast.error('Failed to load quizzes');
+        return;
+      }
+
+      const formattedQuizzes: Quiz[] = quizzesData?.map(quiz => ({
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description || '',
+        category: quiz.category,
+        difficulty: quiz.difficulty as 'Easy' | 'Medium' | 'Hard',
+        timeLimit: quiz.time_limit,
+        questions: quiz.questions?.map(q => ({
+          id: q.id,
+          type: q.question_type as 'multiple-choice' | 'true-false' | 'short-answer',
+          question: q.question,
+          options: q.options as string[] | undefined,
+          correctAnswer: q.correct_answer,
+          points: q.points
+        })) || [],
+        createdAt: new Date(quiz.created_at)
+      })) || [];
+
+      setQuizzes(formattedQuizzes);
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      toast.error('Failed to load quizzes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchResults = async () => {
+    if (!user) return;
+
+    try {
+      const { data: resultsData, error } = await supabase
+        .from('quiz_results')
+        .select('*')
+        .eq('student_id', user.id);
+
+      if (error) {
+        console.error('Error fetching results:', error);
+        return;
+      }
+
+      const formattedResults: QuizResult[] = resultsData?.map(result => ({
+        id: result.id,
+        quizId: result.quiz_id,
+        studentName: user.email || 'Student',
+        score: result.score,
+        totalPoints: result.total_points,
+        completedAt: new Date(result.completed_at),
+        answers: result.answers as Record<string, string>
+      })) || [];
+
+      setResults(formattedResults);
+    } catch (error) {
+      console.error('Error fetching results:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const completedQuizIds = new Set(results.map(r => r.quizId));
   const availableQuizzes = quizzes.filter(quiz => !completedQuizIds.has(quiz.id));
@@ -155,6 +250,7 @@ const StudentDashboard = () => {
                       </div>
                       <Button 
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+                        onClick={() => toast.info('Quiz taking functionality coming soon!')}
                       >
                         <Play className="h-4 w-4 mr-2" />
                         Start Quiz
