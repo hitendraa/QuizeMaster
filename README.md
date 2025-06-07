@@ -1,73 +1,135 @@
-# Welcome to your Lovable project
+# QuizMaster 🎯
 
-## Project info
+A modern, full-featured quiz management platform built with React, TypeScript, and Supabase. Create, manage, and take quizzes with an intuitive interface designed for both educators and students.
 
-**URL**: https://lovable.dev/projects/d6ce3676-ea9d-49e6-8c25-f92f73873407
+## ✨ Features
 
-## How can I edit this code?
+### For Educators
+- **Quiz Creation**: Create comprehensive quizzes with multiple question types
+- **Admin Dashboard**: Manage all quizzes from a centralized dashboard
+- **Analytics**: Track student performance and quiz statistics
+- **Question Types**: Support for multiple choice, true/false, and short answer questions
 
-There are several ways of editing your application.
+### For Students
+- **Interactive Quiz Taking**: Clean, distraction-free quiz interface
+- **Student Dashboard**: View available quizzes and track progress
+- **Real-time Results**: Instant feedback and detailed results
+- **Progress Tracking**: Monitor performance across different categories
 
-**Use Lovable**
+### General Features
+- **Modern UI**: Beautiful, responsive design with Tailwind CSS
+- **Authentication**: Secure user authentication with Supabase
+- **Real-time Updates**: Live data synchronization
+- **Mobile Responsive**: Works seamlessly on all devices
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d6ce3676-ea9d-49e6-8c25-f92f73873407) and start prompting.
+## 🛠️ Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS + Radix UI Components
+- **Backend**: Supabase (Database + Authentication)
+- **State Management**: TanStack Query (React Query)
+- **Routing**: React Router DOM
+- **Forms**: React Hook Form + Zod validation
+- **Charts**: Recharts for analytics
 
-**Use your preferred IDE**
+## 🚀 Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js (v18 or higher)
+- npm or yarn package manager
+- Supabase account (for backend services)
 
-Follow these steps:
+### Installation
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd grade-up-quizzes
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. **Environment Setup**
+   Create a `.env.local` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open your browser**
+   Navigate to `http://localhost:5173`
+
+## 📜 Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run build:dev` - Build for development
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+
+## 🏗️ Project Structure
+
+```
+src/
+├── components/           # React components
+│   ├── AdminDashboard.tsx
+│   ├── QuizCreator.tsx
+│   ├── QuizTaking.tsx
+│   ├── StudentDashboard.tsx
+│   ├── auth/            # Authentication components
+│   └── ui/              # Reusable UI components
+├── hooks/               # Custom React hooks
+├── integrations/
+│   └── supabase/        # Supabase configuration
+├── lib/                 # Utility functions
+├── pages/               # Page components
+└── types/               # TypeScript type definitions
 ```
 
-**Edit a file directly in GitHub**
+## 🎮 Usage
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Creating a Quiz
+1. Navigate to the Admin Dashboard
+2. Click "Create New Quiz"
+3. Fill in quiz details (title, description, category, difficulty)
+4. Add questions with various types
+5. Set time limits and point values
+6. Save and publish
 
-**Use GitHub Codespaces**
+### Taking a Quiz
+1. Browse available quizzes from the Student Dashboard
+2. Select a quiz to start
+3. Answer questions within the time limit
+4. View detailed results upon completion
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🤝 Contributing
 
-## What technologies are used for this project?
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-This project is built with:
+## 📝 License
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## How can I deploy this project?
+## 🙏 Acknowledgments
 
-Simply open [Lovable](https://lovable.dev/projects/d6ce3676-ea9d-49e6-8c25-f92f73873407) and click on Share -> Publish.
+- [Radix UI](https://www.radix-ui.com/) for accessible UI components
+- [Tailwind CSS](https://tailwindcss.com/) for utility-first styling
+- [Supabase](https://supabase.com/) for backend services
+- [Lucide React](https://lucide.dev/) for beautiful icons
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Built with ❤️ by Hitendra

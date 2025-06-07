@@ -54,14 +54,7 @@ const LandingPage = () => {
               Start Learning Today
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              onClick={() => navigate('/auth')}
-              className="text-lg px-8 py-3 border-2"
-            >
-              Try as Admin
-            </Button>
+            
           </div>
         </div>
       </section>
