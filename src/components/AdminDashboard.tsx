@@ -10,15 +10,71 @@ import { toast } from 'sonner';
 import QuizCreator from '@/components/QuizCreator';
 import type { Quiz } from '@/types/quiz';
 
+interface AdminStats {
+  totalQuizzes: number;
+  activeStudents: number;
+  quizAttempts: number;
+  averageScore: number;
+}
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [stats, setStats] = useState<AdminStats>({
+    totalQuizzes: 0,
+    activeStudents: 0,
+    quizAttempts: 0,
+    averageScore: 0
+  });
   const [showQuizCreator, setShowQuizCreator] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchQuizzes();
+    fetchStats();
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      // Get total number of students
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'student');
+
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+      }
+
+      // Get quiz attempts and calculate average score
+      const { data: resultsData, error: resultsError } = await supabase
+        .from('quiz_results')
+        .select('score, total_points');
+
+      if (resultsError) {
+        console.error('Error fetching quiz results:', resultsError);
+      }
+
+      // Calculate average score percentage
+      let averageScore = 0;
+      if (resultsData && resultsData.length > 0) {
+        const totalPercentages = resultsData.reduce((acc, result) => {
+          const percentage = (result.score / result.total_points) * 100;
+          return acc + percentage;
+        }, 0);
+        averageScore = Math.round(totalPercentages / resultsData.length);
+      }
+
+      setStats({
+        totalQuizzes: quizzes.length,
+        activeStudents: studentsData?.length || 0,
+        quizAttempts: resultsData?.length || 0,
+        averageScore
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   const fetchQuizzes = async () => {
     try {
@@ -109,7 +165,8 @@ const AdminDashboard = () => {
 
       toast.success('Quiz created successfully!');
       setShowQuizCreator(false);
-      fetchQuizzes(); // Refresh the list
+      fetchQuizzes();
+      fetchStats(); // Refresh stats after creating quiz
     } catch (error) {
       console.error('Error saving quiz:', error);
       toast.error('Failed to save quiz');
@@ -147,12 +204,20 @@ const AdminDashboard = () => {
       }
 
       toast.success('Quiz deleted successfully!');
-      fetchQuizzes(); // Refresh the list
+      fetchQuizzes();
+      fetchStats(); // Refresh stats after deleting quiz
     } catch (error) {
       console.error('Error deleting quiz:', error);
       toast.error('Failed to delete quiz');
     }
   };
+
+  // Update stats when quizzes change
+  useEffect(() => {
+    if (quizzes.length > 0) {
+      fetchStats();
+    }
+  }, [quizzes]);
 
   if (showQuizCreator) {
     return (
@@ -195,7 +260,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Total Quizzes</p>
-                  <p className="text-2xl font-bold text-gray-800">{quizzes.length}</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.totalQuizzes}</p>
                 </div>
               </div>
             </CardContent>
@@ -209,7 +274,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Active Students</p>
-                  <p className="text-2xl font-bold text-gray-800">0</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.activeStudents}</p>
                 </div>
               </div>
             </CardContent>
@@ -223,7 +288,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Quiz Attempts</p>
-                  <p className="text-2xl font-bold text-gray-800">0</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.quizAttempts}</p>
                 </div>
               </div>
             </CardContent>
@@ -237,7 +302,7 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Avg Score</p>
-                  <p className="text-2xl font-bold text-gray-800">0%</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.averageScore}%</p>
                 </div>
               </div>
             </CardContent>
