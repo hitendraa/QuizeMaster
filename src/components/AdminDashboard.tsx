@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Users, Trophy, Plus, Edit, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BookOpen, Users, Trophy, Plus, Edit, Trash2, Filter } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,6 +20,8 @@ interface AdminStats {
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [filteredQuizzes, setFilteredQuizzes] = useState<Quiz[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [stats, setStats] = useState<AdminStats>({
     totalQuizzes: 0,
     activeStudents: 0,
@@ -33,6 +35,15 @@ const AdminDashboard = () => {
     fetchQuizzes();
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    // Filter quizzes when category selection changes
+    if (selectedCategory === 'all') {
+      setFilteredQuizzes(quizzes);
+    } else {
+      setFilteredQuizzes(quizzes.filter(quiz => quiz.category === selectedCategory));
+    }
+  }, [quizzes, selectedCategory]);
 
   const fetchStats = async () => {
     try {
@@ -219,6 +230,9 @@ const AdminDashboard = () => {
     }
   }, [quizzes]);
 
+  // Get unique categories from quizzes
+  const categories = Array.from(new Set(quizzes.map(quiz => quiz.category))).sort();
+
   if (showQuizCreator) {
     return (
       <div className="min-h-screen p-6">
@@ -312,8 +326,30 @@ const AdminDashboard = () => {
         {/* Quizzes List */}
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
-            <CardTitle>Manage Quizzes</CardTitle>
-            <CardDescription>Create, edit, and manage your quizzes</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Manage Quizzes</CardTitle>
+                <CardDescription>Create, edit, and manage your quizzes</CardDescription>
+              </div>
+              {categories.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-gray-500" />
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -321,10 +357,12 @@ const AdminDashboard = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-500">Loading quizzes...</p>
               </div>
-            ) : quizzes.length === 0 ? (
+            ) : filteredQuizzes.length === 0 ? (
               <div className="text-center py-8">
                 <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 mb-4">No quizzes created yet</p>
+                <p className="text-gray-500 mb-4">
+                  {selectedCategory === 'all' ? 'No quizzes created yet' : `No quizzes found in "${selectedCategory}" category`}
+                </p>
                 <Button 
                   onClick={() => setShowQuizCreator(true)}
                   variant="outline"
@@ -334,7 +372,7 @@ const AdminDashboard = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {quizzes.map((quiz) => (
+                {filteredQuizzes.map((quiz) => (
                   <div key={quiz.id} className="p-4 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

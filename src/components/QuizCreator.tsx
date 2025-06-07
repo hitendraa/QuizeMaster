@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save, X } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Trash2, Save, X, Upload, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Quiz, Question } from '@/types/quiz';
 
 interface QuizCreatorProps {
@@ -28,6 +31,21 @@ const QuizCreator = ({ onSave, onCancel }: QuizCreatorProps) => {
     correctAnswer: '',
     points: 10
   });
+  const [bulkImportText, setBulkImportText] = useState('');
+
+  // Predefined categories
+  const categoryOptions = [
+    'Programming',
+    'Science',
+    'History',
+    'Mathematics',
+    'Literature',
+    'Geography',
+    'General Knowledge',
+    'Technology',
+    'Business',
+    'Arts'
+  ];
 
   const addQuestion = () => {
     if (!currentQuestion.question || !currentQuestion.correctAnswer) return;
@@ -61,9 +79,93 @@ const QuizCreator = ({ onSave, onCancel }: QuizCreatorProps) => {
     setCurrentQuestion({ ...currentQuestion, options: newOptions });
   };
 
+  const parseBulkImport = () => {
+    if (!bulkImportText.trim()) {
+      toast.error('Please enter questions to import');
+      return;
+    }
+
+    try {
+      const lines = bulkImportText.trim().split('\n').filter(line => line.trim());
+      const importedQuestions: Question[] = [];
+      
+      let currentQ: Partial<Question> = {};
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (line.startsWith('Q:') || line.startsWith('Question:')) {
+          // Start of a new question
+          if (currentQ.question && currentQ.correctAnswer) {
+            importedQuestions.push({
+              id: `bulk_${Date.now()}_${importedQuestions.length}`,
+              type: currentQ.type || 'multiple-choice',
+              question: currentQ.question,
+              options: currentQ.options,
+              correctAnswer: currentQ.correctAnswer,
+              points: currentQ.points || 10
+            });
+          }
+          
+          currentQ = {
+            type: 'multiple-choice',
+            question: line.replace(/^(Q:|Question:)\s*/, ''),
+            options: [],
+            points: 10
+          };
+        } else if (line.startsWith('A)') || line.startsWith('B)') || line.startsWith('C)') || line.startsWith('D)')) {
+          // Multiple choice option
+          if (!currentQ.options) currentQ.options = [];
+          currentQ.options.push(line.substring(2).trim());
+        } else if (line.startsWith('Answer:') || line.startsWith('Correct:')) {
+          // Correct answer
+          currentQ.correctAnswer = line.replace(/^(Answer:|Correct:)\s*/, '');
+        } else if (line.startsWith('Points:')) {
+          // Points value
+          const points = parseInt(line.replace('Points:', '').trim());
+          if (!isNaN(points)) currentQ.points = points;
+        } else if (line.startsWith('Type:')) {
+          // Question type
+          const type = line.replace('Type:', '').trim().toLowerCase();
+          if (type.includes('true') || type.includes('false')) {
+            currentQ.type = 'true-false';
+          } else if (type.includes('short') || type.includes('text')) {
+            currentQ.type = 'short-answer';
+          } else {
+            currentQ.type = 'multiple-choice';
+          }
+        }
+      }
+      
+      // Add the last question if valid
+      if (currentQ.question && currentQ.correctAnswer) {
+        importedQuestions.push({
+          id: `bulk_${Date.now()}_${importedQuestions.length}`,
+          type: currentQ.type || 'multiple-choice',
+          question: currentQ.question,
+          options: currentQ.options,
+          correctAnswer: currentQ.correctAnswer,
+          points: currentQ.points || 10
+        });
+      }
+      
+      if (importedQuestions.length === 0) {
+        toast.error('No valid questions found. Please check the format.');
+        return;
+      }
+      
+      setQuestions([...questions, ...importedQuestions]);
+      setBulkImportText('');
+      toast.success(`Successfully imported ${importedQuestions.length} questions!`);
+    } catch (error) {
+      console.error('Error parsing bulk import:', error);
+      toast.error('Error parsing questions. Please check the format.');
+    }
+  };
+
   const handleSave = () => {
     if (!title || !description || !category || questions.length === 0) {
-      alert('Please fill in all required fields and add at least one question.');
+      toast.error('Please fill in all required fields and add at least one question.');
       return;
     }
 
@@ -85,6 +187,24 @@ const QuizCreator = ({ onSave, onCancel }: QuizCreatorProps) => {
     (currentQuestion.type !== 'multiple-choice' || 
      (currentQuestion.options && currentQuestion.options.filter(opt => opt.trim()).length >= 2));
 
+  const bulkImportExample = `Q: What is the capital of France?
+A) London
+B) Berlin
+C) Paris
+D) Madrid
+Answer: Paris
+Points: 10
+
+Q: The Earth is flat.
+Type: true-false
+Answer: false
+Points: 5
+
+Q: What programming language is known for web development?
+Type: short-answer
+Answer: JavaScript
+Points: 15`;
+
   return (
     <div className="space-y-6">
       {/* Quiz Details */}
@@ -105,12 +225,16 @@ const QuizCreator = ({ onSave, onCancel }: QuizCreatorProps) => {
             </div>
             <div>
               <Label htmlFor="category">Category*</Label>
-              <Input
-                id="category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="e.g., Programming, Science, History"
-              />
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
@@ -154,126 +278,182 @@ const QuizCreator = ({ onSave, onCancel }: QuizCreatorProps) => {
         </CardContent>
       </Card>
 
-      {/* Add Question */}
+      {/* Add Questions - Tabs for Individual vs Bulk Import */}
       <Card>
         <CardHeader>
-          <CardTitle>Add Question</CardTitle>
+          <CardTitle>Add Questions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="questionType">Question Type</Label>
-              <Select 
-                value={currentQuestion.type} 
-                onValueChange={(value: Question['type']) => 
-                  setCurrentQuestion({ 
-                    ...currentQuestion, 
-                    type: value,
-                    options: value === 'multiple-choice' ? ['', '', '', ''] : undefined,
-                    correctAnswer: ''
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                  <SelectItem value="true-false">True/False</SelectItem>
-                  <SelectItem value="short-answer">Short Answer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="points">Points</Label>
-              <Input
-                id="points"
-                type="number"
-                value={currentQuestion.points}
-                onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: parseInt(e.target.value) || 10 })}
-                min={1}
-                max={100}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="question">Question*</Label>
-            <Textarea
-              id="question"
-              value={currentQuestion.question}
-              onChange={(e) => setCurrentQuestion({ ...currentQuestion, question: e.target.value })}
-              placeholder="Enter your question"
-              rows={2}
-            />
-          </div>
-
-          {currentQuestion.type === 'multiple-choice' && (
-            <div>
-              <Label>Answer Options*</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                {currentQuestion.options?.map((option, index) => (
+        <CardContent>
+          <Tabs defaultValue="individual" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="individual" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Individual
+              </TabsTrigger>
+              <TabsTrigger value="bulk" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Bulk Import
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="individual" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="questionType">Question Type</Label>
+                  <Select 
+                    value={currentQuestion.type} 
+                    onValueChange={(value: Question['type']) => 
+                      setCurrentQuestion({ 
+                        ...currentQuestion, 
+                        type: value,
+                        options: value === 'multiple-choice' ? ['', '', '', ''] : undefined,
+                        correctAnswer: ''
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                      <SelectItem value="true-false">True/False</SelectItem>
+                      <SelectItem value="short-answer">Short Answer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="points">Points</Label>
                   <Input
-                    key={index}
-                    value={option}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    placeholder={`Option ${index + 1}`}
+                    id="points"
+                    type="number"
+                    value={currentQuestion.points}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: parseInt(e.target.value) || 10 })}
+                    min={1}
+                    max={100}
                   />
-                ))}
+                </div>
               </div>
-            </div>
-          )}
 
-          <div>
-            <Label htmlFor="correctAnswer">Correct Answer*</Label>
-            {currentQuestion.type === 'multiple-choice' ? (
-              <Select 
-                value={currentQuestion.correctAnswer} 
-                onValueChange={(value) => setCurrentQuestion({ ...currentQuestion, correctAnswer: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select correct option" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentQuestion.options?.map((option, index) => (
-                    option.trim() && (
-                      <SelectItem key={index} value={option}>
-                        {option}
-                      </SelectItem>
-                    )
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : currentQuestion.type === 'true-false' ? (
-              <Select 
-                value={currentQuestion.correctAnswer} 
-                onValueChange={(value) => setCurrentQuestion({ ...currentQuestion, correctAnswer: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select true or false" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">True</SelectItem>
-                  <SelectItem value="false">False</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                value={currentQuestion.correctAnswer}
-                onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswer: e.target.value })}
-                placeholder="Enter the correct answer"
-              />
-            )}
-          </div>
+              <div>
+                <Label htmlFor="question">Question*</Label>
+                <Textarea
+                  id="question"
+                  value={currentQuestion.question}
+                  onChange={(e) => setCurrentQuestion({ ...currentQuestion, question: e.target.value })}
+                  placeholder="Enter your question"
+                  rows={2}
+                />
+              </div>
 
-          <Button 
-            onClick={addQuestion} 
-            disabled={!canAddQuestion}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Question
-          </Button>
+              {currentQuestion.type === 'multiple-choice' && (
+                <div>
+                  <Label>Answer Options*</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                    {currentQuestion.options?.map((option, index) => (
+                      <Input
+                        key={index}
+                        value={option}
+                        onChange={(e) => handleOptionChange(index, e.target.value)}
+                        placeholder={`Option ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="correctAnswer">Correct Answer*</Label>
+                {currentQuestion.type === 'multiple-choice' ? (
+                  <Select 
+                    value={currentQuestion.correctAnswer} 
+                    onValueChange={(value) => setCurrentQuestion({ ...currentQuestion, correctAnswer: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select correct option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currentQuestion.options?.map((option, index) => (
+                        option.trim() && (
+                          <SelectItem key={index} value={option}>
+                            {option}
+                          </SelectItem>
+                        )
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : currentQuestion.type === 'true-false' ? (
+                  <Select 
+                    value={currentQuestion.correctAnswer} 
+                    onValueChange={(value) => setCurrentQuestion({ ...currentQuestion, correctAnswer: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select true or false" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">True</SelectItem>
+                      <SelectItem value="false">False</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={currentQuestion.correctAnswer}
+                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswer: e.target.value })}
+                    placeholder="Enter the correct answer"
+                  />
+                )}
+              </div>
+
+              <Button 
+                onClick={addQuestion} 
+                disabled={!canAddQuestion}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Question
+              </Button>
+            </TabsContent>
+            
+            <TabsContent value="bulk" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="bulkImport">Bulk Import Questions</Label>
+                  <Textarea
+                    id="bulkImport"
+                    value={bulkImportText}
+                    onChange={(e) => setBulkImportText(e.target.value)}
+                    placeholder="Paste your questions here using the format shown below..."
+                    rows={10}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={parseBulkImport}
+                    disabled={!bulkImportText.trim()}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Questions
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setBulkImportText('')}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Format Example:
+                  </h4>
+                  <pre className="text-sm text-gray-600 whitespace-pre-wrap">{bulkImportExample}</pre>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
