@@ -7,6 +7,8 @@ import { BookOpen, Clock, Trophy, Play, Calendar } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import QuizTaking from '@/components/QuizTaking';
+import ResultsView from '@/components/ResultsView';
 import type { Quiz, QuizResult } from '@/types/quiz';
 
 const StudentDashboard = () => {
@@ -15,6 +17,9 @@ const StudentDashboard = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [results, setResults] = useState<QuizResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'taking' | 'results'>('dashboard');
+  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
+  const [currentResult, setCurrentResult] = useState<QuizResult | null>(null);
 
   useEffect(() => {
     fetchQuizzes();
@@ -94,6 +99,56 @@ const StudentDashboard = () => {
     }
   };
 
+  const handleStartQuiz = (quiz: Quiz) => {
+    setSelectedQuiz(quiz);
+    setCurrentView('taking');
+  };
+
+  const handleQuizComplete = async (result: QuizResult) => {
+    if (!user) {
+      toast.error('You must be logged in to save quiz results');
+      return;
+    }
+
+    try {
+      // Save result to Supabase
+      const { error } = await supabase
+        .from('quiz_results')
+        .insert({
+          quiz_id: result.quizId,
+          student_id: user.id,
+          score: result.score,
+          total_points: result.totalPoints,
+          answers: result.answers,
+          completed_at: result.completedAt.toISOString()
+        });
+
+      if (error) {
+        console.error('Error saving quiz result:', error);
+        toast.error('Failed to save quiz result');
+        return;
+      }
+
+      // Update local state
+      setResults(prev => [...prev, result]);
+      setCurrentResult(result);
+      setCurrentView('results');
+      toast.success('Quiz completed successfully!');
+    } catch (error) {
+      console.error('Error saving quiz result:', error);
+      toast.error('Failed to save quiz result');
+    }
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+    setSelectedQuiz(null);
+    setCurrentResult(null);
+    // Refresh data when returning to dashboard
+    fetchQuizzes();
+    fetchResults();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen p-6">
@@ -127,6 +182,28 @@ const StudentDashboard = () => {
   const averageScore = results.length > 0 
     ? Math.round(results.reduce((acc, r) => acc + (r.score / r.totalPoints) * 100, 0) / results.length)
     : 0;
+
+  // Show quiz taking interface
+  if (currentView === 'taking' && selectedQuiz) {
+    return (
+      <QuizTaking
+        quiz={selectedQuiz}
+        onComplete={handleQuizComplete}
+        onBack={handleBackToDashboard}
+      />
+    );
+  }
+
+  // Show results interface
+  if (currentView === 'results' && currentResult && selectedQuiz) {
+    return (
+      <ResultsView
+        result={currentResult}
+        quiz={selectedQuiz}
+        onBack={handleBackToDashboard}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen p-6">
@@ -250,10 +327,11 @@ const StudentDashboard = () => {
                       </div>
                       <Button 
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-                        onClick={() => toast.info('Quiz taking functionality coming soon!')}
+                        onClick={() => handleStartQuiz(quiz)}
+                        disabled={quiz.questions.length === 0}
                       >
                         <Play className="h-4 w-4 mr-2" />
-                        Start Quiz
+                        {quiz.questions.length === 0 ? 'No Questions Available' : 'Start Quiz'}
                       </Button>
                     </div>
                   </CardContent>

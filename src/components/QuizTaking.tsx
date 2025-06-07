@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
 import { Clock, ArrowLeft, ArrowRight, Send } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import type { Quiz, QuizResult } from '@/types/quiz';
 
 interface QuizTakingProps {
@@ -15,10 +16,10 @@ interface QuizTakingProps {
 }
 
 const QuizTaking = ({ quiz, onComplete, onBack }: QuizTakingProps) => {
+  const { user } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeRemaining, setTimeRemaining] = useState(quiz.timeLimit * 60); // in seconds
-  const [studentName, setStudentName] = useState('');
   const [isStarted, setIsStarted] = useState(false);
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
@@ -76,7 +77,7 @@ const QuizTaking = ({ quiz, onComplete, onBack }: QuizTakingProps) => {
     const result: QuizResult = {
       id: Date.now().toString(),
       quizId: quiz.id,
-      studentName: studentName || 'Anonymous',
+      studentName: user?.email || 'Anonymous',
       score: totalScore,
       totalPoints,
       completedAt: new Date(),
@@ -122,17 +123,6 @@ const QuizTaking = ({ quiz, onComplete, onBack }: QuizTakingProps) => {
                 </div>
                 <div className="text-sm text-gray-600">Total Points</div>
               </div>
-            </div>
-
-            <div>
-              <Label htmlFor="studentName">Your Name (Optional)</Label>
-              <Input
-                id="studentName"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                placeholder="Enter your name"
-                className="mt-1"
-              />
             </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
